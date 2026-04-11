@@ -32,3 +32,4 @@ data/*
 
 # Docker
 docker/db_data/
+local_analytics.db

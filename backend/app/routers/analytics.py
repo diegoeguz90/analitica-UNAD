@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, or_, desc
 import pandas as pd
+import io
 from app.database import get_db
-from app.models import EnrollmentRecord
+from app.models import EnrollmentRecord, Student
 from app.schemas import AnalyticsSummaryResponse
 from typing import List, Optional
 
@@ -69,9 +71,6 @@ def get_analytics_summary(
         "top_centers": [{"label": row[0], "value": row[1]} for row in res_centers]
     }
 
-from fastapi.responses import StreamingResponse
-import io
-
 @router.get("/zones", response_model=List[dict])
 def get_zone_distribution(
     periods: Optional[List[str]] = Query(None),
@@ -90,10 +89,6 @@ def get_zone_distribution(
 @router.get("/export_students")
 def export_students(db: Session = Depends(get_db)):
     # Query unique students with their most recent enrollment info
-    # For SQLite, we can get the list of students and then their latest period record
-    from sqlalchemy import desc
-    from app.models import Student
-    
     students = db.query(Student).all()
     data = []
     
@@ -122,3 +117,58 @@ def export_students(db: Session = Depends(get_db)):
     response.headers["Content-Disposition"] = "attachment; filename=directorio_estudiantes_unicos.csv"
     
     return response
+
+@router.get("/students")
+def get_paginated_students(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    q: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Student)
+    if q:
+        search = f"%{q}%"
+        query = query.filter(or_(
+            Student.nombre.ilike(search),
+            Student.documento.ilike(search)
+        ))
+
+    total = query.count()
+    students_query = (
+        query
+        .options(
+            joinedload(Student.enrollments).joinedload(EnrollmentRecord.file)
+        )
+        .order_by(Student.nombre)
+        .offset(skip).limit(limit).all()
+    )
+    
+    data = []
+    for s in students_query:
+        sorted_enrollments = sorted(s.enrollments, key=lambda e: e.periodo, reverse=True)
+        latest = sorted_enrollments[0] if sorted_enrollments else None
+        
+        history = [
+            {
+                "periodo": e.periodo,
+                "programa": e.file.programa if e.file else "N/A",
+                "creditos_totales": e.creditos_totales
+            }
+            for e in sorted_enrollments
+        ]
+        
+        data.append({
+            "documento": s.documento,
+            "nombre": s.nombre,
+            "correo": s.correo_institucional,
+            "ultima_zona": latest.zona if latest else "N/A",
+            "ultimo_centro": latest.centro if latest else "N/A",
+            "historial": history
+        })
+        
+    return {
+        "items": data,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }

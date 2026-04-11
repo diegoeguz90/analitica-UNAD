@@ -99,18 +99,13 @@ const Dashboard = () => {
     setZonePeriods(values);
   };
 
-  const handleDownload = () => {
-    window.open(`${API_BASE}/analytics/export_students`, '_blank');
-  };
+
 
   return (
     <div className="glass-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
           <h2>Dashboard Analítico</h2>
-          <button className="btn btn-primary" onClick={handleDownload} style={{ marginTop: '-1rem' }}>
-            Descargar Directorio de Estudiantes (.csv)
-          </button>
         </div>
         <div className="filters-container">
           <label className="file-meta" style={{ marginRight: '1rem', color: '#fff' }}>Filtrar Periodos Globales:</label>
@@ -152,7 +147,6 @@ const Dashboard = () => {
           </div>
 
           <div className="chart-grid">
-            {/* ... other charts ... */}
             <div className="glass-card chart-box">
               <h3>Estudiantes Únicos por Periodo</h3>
               <div className="chart-container">
@@ -188,43 +182,43 @@ const Dashboard = () => {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
 
-            {/* Zone Distribution with Independent Filter */}
-            <div className="glass-card chart-box" style={{ gridColumn: '1 / -1' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h3>Distribución de Estudiantes por Zona</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="file-meta">Filtro Zona:</span>
-                    <select 
-                      multiple 
-                      className="select-base" 
-                      onChange={handleZonePeriodChange}
-                      value={zonePeriods.length === 0 ? ["all"] : zonePeriods}
-                      style={{ height: '60px', minWidth: '150px' }}
-                    >
-                      <option value="all">Sincronizar Global</option>
-                      {files.map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                </div>
+          {/* Zone Distribution as a Standalone Highlight */}
+          <div className="glass-card chart-box" style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3>Distribución de Estudiantes por Zona</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className="file-meta">Filtro Zona:</span>
+                  <select 
+                    multiple 
+                    className="select-base" 
+                    onChange={handleZonePeriodChange}
+                    value={zonePeriods.length === 0 ? ["all"] : zonePeriods}
+                    style={{ height: '60px', minWidth: '150px' }}
+                  >
+                    <option value="all">Sincronizar Global</option>
+                    {files.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
               </div>
-              <div className="chart-container" style={{ height: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart layout="vertical" data={zoneData} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis type="number" stroke="var(--text-muted)" />
-                    <YAxis dataKey="label" type="category" stroke="var(--text-main)" width={120} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
-                    <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            </div>
+            <div className="chart-container" style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={zoneData} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis type="number" stroke="var(--text-muted)" />
+                  <YAxis dataKey="label" type="category" stroke="var(--text-main)" width={120} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
+                  <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
           {/* Tables Row */}
-          <div className="chart-grid" style={{ marginTop: '2rem' }}>
+          <div className="chart-grid">
             <div className="glass-card chart-box">
               <h3>Top Zonas (Estudiantes)</h3>
               <div className="table-wrapper">

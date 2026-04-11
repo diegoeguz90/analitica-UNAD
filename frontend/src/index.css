@@ -248,3 +248,96 @@ h3 {
   height: 350px;
   width: 100%;
 }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Student Directory */
+.directory-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.directory-table th {
+  padding: 1rem 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+
+.directory-row {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.directory-row:hover {
+  background-color: #f8fafc;
+}
+
+.directory-row td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.expandable-row {
+  background-color: #f8fafc;
+}
+
+.expandable-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  opacity: 0;
+  max-height: 0;
+}
+
+.expandable-content.expanded {
+  opacity: 1;
+  max-height: 500px;
+}
+
+.history-card {
+  margin: 1.5rem;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.history-item {
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-secondary);
+  background-color: #fafafa;
+}
+
+/* Pagination */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0 0 0;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.pagination-controls span {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}

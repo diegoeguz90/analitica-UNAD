@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList
 } from 'recharts';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -156,13 +156,9 @@ const Dashboard = () => {
                     <XAxis dataKey="periodo" stroke="var(--text-muted)" />
                     <YAxis stroke="var(--text-muted)" />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
-                    <Bar dataKey="value" name="Estudiantes" fill="url(#colorStudents)" radius={[4, 4, 0, 0]} />
-                    <defs>
-                      <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="var(--accent-secondary)" stopOpacity={0.8}/>
-                      </linearGradient>
-                    </defs>
+                    <Bar dataKey="value" name="Estudiantes" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} opacity={0.8}>
+                      <LabelList dataKey="value" position="top" style={{ fill: 'var(--text-muted)', fontSize: '12px', fontWeight: 'bold' }} />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -177,7 +173,9 @@ const Dashboard = () => {
                     <XAxis dataKey="periodo" stroke="var(--text-muted)" />
                     <YAxis stroke="var(--text-muted)" />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
-                    <Bar dataKey="value" name="Créditos" fill="var(--success)" radius={[4, 4, 0, 0]} opacity={0.7} />
+                    <Bar dataKey="value" name="Créditos" fill="var(--success)" radius={[4, 4, 0, 0]} opacity={0.7}>
+                       <LabelList dataKey="value" position="top" style={{ fill: 'var(--text-muted)', fontSize: '11px' }} formatter={(v) => v.toLocaleString()} />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -211,7 +209,9 @@ const Dashboard = () => {
                   <XAxis type="number" stroke="var(--text-muted)" />
                   <YAxis dataKey="label" type="category" stroke="var(--text-main)" width={120} />
                   <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
-                  <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8} />
+                  <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8}>
+                    <LabelList dataKey="value" position="right" style={{ fill: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>

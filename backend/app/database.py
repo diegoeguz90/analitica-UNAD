@@ -16,6 +16,28 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+def init_db():
+    Base.metadata.create_all(bind=engine)
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            columns = [
+                ("estado", "VARCHAR"),
+                ("fecha_matricula_inicial", "VARCHAR"),
+                ("periodo_matricula_inicial", "VARCHAR"),
+                ("semestre_relativo", "INTEGER")
+            ]
+            for col, col_type in columns:
+                try:
+                    conn.execute(text(f"ALTER TABLE students ADD COLUMN {col} {col_type}"))
+                except Exception:
+                    pass
+            conn.commit()
+    except Exception:
+        pass
+
+init_db()
+
 def get_db():
     db = SessionLocal()
     try:

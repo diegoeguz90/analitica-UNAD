@@ -123,6 +123,8 @@ def get_paginated_students(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     q: Optional[str] = Query(None),
+    estado: Optional[str] = Query(None),
+    semestre: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
     query = db.query(Student)
@@ -132,6 +134,12 @@ def get_paginated_students(
             Student.nombre.ilike(search),
             Student.documento.ilike(search)
         ))
+        
+    if estado:
+        query = query.filter(Student.estado == estado)
+        
+    if semestre is not None:
+        query = query.filter(Student.semestre_relativo == semestre)
 
     total = query.count()
     students_query = (
@@ -163,6 +171,10 @@ def get_paginated_students(
             "correo": s.correo_institucional,
             "ultima_zona": latest.zona if latest else "N/A",
             "ultimo_centro": latest.centro if latest else "N/A",
+            "estado": s.estado or "Indeterminado",
+            "fecha_matricula_inicial": s.fecha_matricula_inicial or "N/A",
+            "periodo_matricula_inicial": s.periodo_matricula_inicial or "N/A",
+            "semestre_relativo": s.semestre_relativo,
             "historial": history
         })
         

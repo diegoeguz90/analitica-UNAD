@@ -17,9 +17,15 @@ class FileMetadata(Base):
 class Student(Base):
     __tablename__ = "students"
 
-    documento = Column(String, primary_key=True, index=True) # Unique ID (Column C)
+    documento = Column(String, primary_key=True, index=True) # Unique ID (Column C in regular, B in enrichment)
     nombre = Column(String)
     correo_institucional = Column(String)
+    
+    # Enrichment Fields
+    estado = Column(String, nullable=True)
+    fecha_matricula_inicial = Column(String, nullable=True)
+    periodo_matricula_inicial = Column(String, nullable=True)
+    semestre_relativo = Column(Integer, nullable=True)
 
     enrollments = relationship("EnrollmentRecord", back_populates="student")
 

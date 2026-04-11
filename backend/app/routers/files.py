@@ -24,6 +24,23 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
         records_processed=result["records"]
     )
 
+from app.services.etl_service import process_enrichment_file
+
+@router.post("/upload_enrichment")
+async def upload_enrichment_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file.filename.endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Only .xlsx files are supported")
+    
+    content = await file.read()
+    result = process_enrichment_file(db, content, file.filename)
+    
+    return {
+        "status": "success",
+        "message": f"Archivo de enriquecimiento procesado. {result['updated']} estudiantes actualizados.",
+        "filename": file.filename,
+        "records_updated": result["updated"]
+    }
+
 @router.get("/", response_model=List[schemas.FileMetadataResponse])
 def get_files(db: Session = Depends(get_db)):
     files = db.query(models.FileMetadata).all()
@@ -46,6 +63,15 @@ def delete_file(file_id: int, db: Session = Depends(get_db)):
     if not file_metadata:
         raise HTTPException(status_code=404, detail="File not found")
     
+    # If it's the master enrichment file, clear the student fields
+    if file_metadata.periodo == "MAESTRO" and file_metadata.programa == "ESTADO":
+        db.query(models.Student).update({
+            models.Student.estado: None,
+            models.Student.fecha_matricula_inicial: None,
+            models.Student.periodo_matricula_inicial: None,
+            models.Student.semestre_relativo: None
+        })
+
     db.delete(file_metadata)
     db.commit()
     return {"status": "success", "message": "File and its associated records deleted"}

@@ -8,6 +8,8 @@ const StudentDirectory = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [filterSemestre, setFilterSemestre] = useState('');
   
   // Pagination
   const [skip, setSkip] = useState(0);
@@ -18,13 +20,17 @@ const StudentDirectory = () => {
 
   useEffect(() => {
     fetchStudents();
-  }, [skip, limit, search]);
+  }, [skip, limit, search, filterEstado, filterSemestre]);
 
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const q = search ? `&q=${encodeURIComponent(search)}` : '';
-      const res = await axios.get(`${API_BASE}/analytics/students?skip=${skip}&limit=${limit}${q}`);
+      let url = `${API_BASE}/analytics/students?skip=${skip}&limit=${limit}`;
+      if (search) url += `&q=${encodeURIComponent(search)}`;
+      if (filterEstado) url += `&estado=${encodeURIComponent(filterEstado)}`;
+      if (filterSemestre) url += `&semestre=${filterSemestre}`;
+      
+      const res = await axios.get(url);
       setTotal(res.data.total);
       setStudents(res.data.items);
     } catch (error) {
@@ -65,6 +71,18 @@ const StudentDirectory = () => {
     setSkip(0); // Reset to first page
     setExpandedRow(null);
   };
+  
+  const handleEstadoChange = (e) => {
+    setFilterEstado(e.target.value);
+    setSkip(0);
+    setExpandedRow(null);
+  };
+
+  const handleSemestreChange = (e) => {
+    setFilterSemestre(e.target.value);
+    setSkip(0);
+    setExpandedRow(null);
+  };
 
   return (
     <div className="glass-card" style={{ padding: '2rem 3rem' }}>
@@ -75,16 +93,40 @@ const StudentDirectory = () => {
             Listado general con detalle de historial académico.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, justifyContent: 'flex-end', minWidth: '300px' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end', minWidth: '300px' }}>
+          <select 
+            className="select-base"
+            style={{ height: '42px', minWidth: '150px' }}
+            value={filterEstado}
+            onChange={handleEstadoChange}
+          >
+            <option value="">-- Todos los Estados --</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+            <option value="Egresando">Egresando</option>
+          </select>
+          
+          <select 
+            className="select-base"
+            style={{ height: '42px', minWidth: '120px' }}
+            value={filterSemestre}
+            onChange={handleSemestreChange}
+          >
+            <option value="">-- Semestre --</option>
+            {[...Array(10)].map((_, i) => (
+              <option key={i+1} value={i+1}>Semestre {i+1}</option>
+            ))}
+          </select>
+
           <input 
             type="text" 
             placeholder="Buscar por nombre o documento..." 
             className="select-base"
-            style={{ width: '100%', maxWidth: '400px', height: '42px' }}
+            style={{ width: '100%', maxWidth: '300px', height: '42px' }}
             value={search}
             onChange={handleSearchChange}
           />
-          <button className="btn btn-primary" onClick={handleDownload} style={{ whiteSpace: 'nowrap' }}>
+          <button className="btn btn-primary" onClick={handleDownload} style={{ whiteSpace: 'nowrap', height: '42px' }}>
             Descargar (.csv)
           </button>
         </div>
@@ -101,9 +143,9 @@ const StudentDirectory = () => {
               <tr>
                 <th>Documento</th>
                 <th>Nombre</th>
-                <th>Correo Institucional</th>
-                <th>Centro</th>
-                <th>Zona</th>
+                <th>Estado</th>
+                <th>Semestre</th>
+                <th>Centro / Zona</th>
               </tr>
             </thead>
             <tbody>
@@ -115,17 +157,45 @@ const StudentDirectory = () => {
                     style={{ background: expandedRow === student.documento ? '#f0f9ff' : 'transparent' }}
                   >
                     <td><strong>{student.documento}</strong></td>
-                    <td>{student.nombre}</td>
-                    <td style={{ color: 'var(--accent-primary)' }}>{student.correo}</td>
-                    <td>{student.ultimo_centro}</td>
-                    <td>{student.ultima_zona}</td>
+                    <td>
+                      <div>{student.nombre}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', marginTop: '4px' }}>{student.correo}</div>
+                    </td>
+                    <td>
+                      <span style={{ 
+                        padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600,
+                        background: student.estado === 'Activo' ? '#dcfce7' : student.estado === 'Egresando' ? '#fef08a' : '#f1f5f9',
+                        color: student.estado === 'Activo' ? '#166534' : student.estado === 'Egresando' ? '#854d0e' : '#475569'
+                      }}>
+                        {student.estado}
+                      </span>
+                    </td>
+                    <td>
+                      {student.semestre_relativo ? (
+                        <strong>{student.semestre_relativo}°</strong>
+                      ) : (
+                        <span style={{color: 'var(--text-muted)'}}>-</span>
+                      )}
+                    </td>
+                    <td>
+                      <div>{student.ultimo_centro}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>{student.ultima_zona}</div>
+                    </td>
                   </tr>
                   
                   {/* Expandable Content */}
                   <tr>
                     <td colSpan="5" style={{ padding: 0, borderBottom: expandedRow === student.documento ? '1px solid var(--border)' : 'none' }}>
                       <div className={`expandable-content ${expandedRow === student.documento ? 'expanded' : ''}`}>
-                        <div className="history-card">
+                        <div className="history-card" style={{ background: '#f8fafc' }}>
+                          <div style={{ gridColumn: '1 / -1', paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '0.5rem', display: 'flex', gap: '2rem' }}>
+                            <div>
+                                <span className="file-meta">Fecha de Ingreso:</span> <strong>{student.fecha_matricula_inicial}</strong>
+                            </div>
+                            <div>
+                                <span className="file-meta">Periodo Inicial:</span> <strong>{student.periodo_matricula_inicial}</strong>
+                            </div>
+                          </div>
                           {student.historial && student.historial.length > 0 ? (
                             student.historial.map((hist, idx) => (
                               <div key={idx} className="history-item">
@@ -152,7 +222,7 @@ const StudentDirectory = () => {
               {students.length === 0 && (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No se encontraron estudiantes registrados.
+                    No se encontraron estudiantes con los filtros aplicados.
                   </td>
                 </tr>
               )}

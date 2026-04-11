@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import FileMetadata, Student, EnrollmentRecord
 from fastapi import HTTPException
+from datetime import datetime
 
 # Excel Columns
 # A: Periodo (0)
@@ -106,3 +107,64 @@ def process_excel_upload(db: Session, file_content: bytes, filename: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+def process_enrichment_file(db: Session, file_content: bytes, filename: str):
+    import io
+    try:
+        # Col B (1): Documento
+        # Col G (6): Estado
+        # Col H (7): Fecha Inicial
+        # Col I (8): Periodo Inicial
+        # Col N (13): Semestre Relativo
+        df = pd.read_excel(io.BytesIO(file_content), header=12, usecols="B,G,H,I,N")
+        
+        # Rename for easier access
+        df.columns = ['Documento', 'Estado', 'Fecha_Matricula', 'Periodo_Matricula', 'Semestre_Relativo']
+        df = df.dropna(subset=['Documento'])
+        
+        # We need to update existing students
+        unique_docs = df['Documento'].astype(str).unique().tolist()
+        existing_students = db.query(Student).filter(Student.documento.in_(unique_docs)).all()
+        student_map = {s.documento: s for s in existing_students}
+        
+        updated_count = 0
+        
+        for _, row in df.iterrows():
+            doc = str(row['Documento']).strip()
+            if doc in student_map:
+                student = student_map[doc]
+                
+                estado = str(row['Estado']).strip() if pd.notnull(row['Estado']) else None
+                fecha = str(row['Fecha_Matricula']).strip() if pd.notnull(row['Fecha_Matricula']) else None
+                periodo = str(row['Periodo_Matricula']).strip() if pd.notnull(row['Periodo_Matricula']) else None
+                
+                semestre = None
+                try:
+                    if pd.notnull(row['Semestre_Relativo']):
+                        semestre = int(row['Semestre_Relativo'])
+                except:
+                    pass
+                
+                # Only update if there are meaningful changes or if it's the first time
+                student.estado = estado
+                student.fecha_matricula_inicial = fecha
+                student.periodo_matricula_inicial = periodo
+                student.semestre_relativo = semestre
+                
+                updated_count += 1
+        
+        # Track metadata for this enrichment file
+        # We use special markers for Periodo and Programa to identify it
+        existing_meta = db.query(FileMetadata).filter(FileMetadata.periodo == "MAESTRO", FileMetadata.programa == "ESTADO").first()
+        if existing_meta:
+            existing_meta.filename = filename
+            existing_meta.uploaded_at = datetime.utcnow()
+        else:
+            new_meta = FileMetadata(filename=filename, periodo="MAESTRO", programa="ESTADO")
+            db.add(new_meta)
+                
+        db.commit()
+        return {"updated": updated_count}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing enrichment file: {str(e)}")

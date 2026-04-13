@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { UploadCloud, Trash2, FileSpreadsheet, RefreshCw } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 const FileManager = () => {
   const [files, setFiles] = useState([]);

@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList
 } from 'recharts';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 const Dashboard = () => {
   const [files, setFiles] = useState([]);

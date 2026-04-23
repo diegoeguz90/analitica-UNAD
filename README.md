@@ -7,9 +7,22 @@ Este proyecto es una plataforma web para procesar, almacenar y visualizar datos 
 
 ## Arquitectura
 - **Frontend**: React + Vite (Aesthetics-driven UI)
-- **Backend**: Python (FastAPI/Flask) - Procesamiento ETL
-- **Base de Datos**: PostgreSQL / SQLite (según configuración)
+- **Backend**: Python (FastAPI) - Procesamiento ETL con Pandas & SQLAlchemy
+- **Base de Datos**: SQLite (Persistence layer)
 - **Contenedores**: Docker & Docker Compose
+
+## Módulos Principales
+
+### 1. Análisis de Matrícula (Directorio Principal)
+Procesamiento de reportes de matrícula general para análisis de población, zona, centro y programas académicos.
+
+### 2. Estudiantes por Opción de Trabajo de Grado (Nuevo)
+Módulo especializado para el seguimiento de estudiantes que seleccionan cursos como opción de trabajo de grado.
+- **Carga de Datos**: Procesamiento de reportes Excel de cursos como opción de trabajo de grado.
+- **KPIs Dinámicos**: Seguimiento en tiempo real de estudiantes únicos, periodos y programas.
+- **Análisis de Continuidad**: Identificación automática de estudiantes que han continuado hacia el programa analizado.
+- **Filtros Avanzados**: Filtrado persistente por programa, periodo y estado de continuidad.
+- **Directorio & Exportación**: Tabla detallada de estudiantes con opción de descarga en formato CSV para gestión administrativa.
 
 ## Requisitos
 - Docker y Docker Compose

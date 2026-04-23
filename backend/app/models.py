@@ -43,3 +43,28 @@ class EnrollmentRecord(Base):
 
     file = relationship("FileMetadata", back_populates="enrollments")
     student = relationship("Student", back_populates="enrollments")
+
+class DegreeWorkFile(Base):
+    __tablename__ = "degree_work_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, index=True)
+    periodo = Column(String, index=True)
+    curso = Column(String, index=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    records = relationship("DegreeWorkRecord", back_populates="file", cascade="all, delete-orphan")
+
+class DegreeWorkRecord(Base):
+    __tablename__ = "degree_work_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(Integer, ForeignKey("degree_work_files.id"), index=True)
+    documento = Column(String, index=True)
+    estudiante = Column(String)
+    correo = Column(String)
+    zona = Column(String)
+    centro = Column(String)
+    programa_origen = Column(String, index=True)
+
+    file = relationship("DegreeWorkFile", back_populates="records")

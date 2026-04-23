@@ -178,9 +178,13 @@ def get_paginated_students(
             "historial": history
         })
         
+    # Get maximum semester to inform the frontend filter
+    max_semester = db.query(func.max(Student.semestre_relativo)).scalar() or 10
+
     return {
         "items": data,
         "total": total,
         "skip": skip,
-        "limit": limit
+        "limit": limit,
+        "max_semester": int(max_semester)
     }

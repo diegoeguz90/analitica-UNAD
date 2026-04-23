@@ -10,6 +10,7 @@ const StudentDirectory = () => {
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterSemestre, setFilterSemestre] = useState('');
+  const [maxSemester, setMaxSemester] = useState(10);
   
   // Pagination
   const [skip, setSkip] = useState(0);
@@ -33,6 +34,7 @@ const StudentDirectory = () => {
       const res = await axios.get(url);
       setTotal(res.data.total);
       setStudents(res.data.items);
+      if (res.data.max_semester) setMaxSemester(res.data.max_semester);
     } catch (error) {
       console.error("Error fetching students:", error);
     } finally {
@@ -113,7 +115,7 @@ const StudentDirectory = () => {
             onChange={handleSemestreChange}
           >
             <option value="">-- Semestre --</option>
-            {[...Array(10)].map((_, i) => (
+            {[...Array(maxSemester)].map((_, i) => (
               <option key={i+1} value={i+1}>Semestre {i+1}</option>
             ))}
           </select>

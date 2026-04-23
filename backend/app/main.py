@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import files, analytics
+from app.routers import files, analytics, degree_work
 import os
 
 # Create database tables
@@ -19,6 +19,7 @@ app.add_middleware(
 
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(degree_work.router, prefix="/api/degree-work", tags=["Degree Work"])
 
 @app.get("/")
 def read_root():

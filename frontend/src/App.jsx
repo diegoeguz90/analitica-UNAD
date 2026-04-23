@@ -2,6 +2,7 @@ import { useState } from 'react'
 import FileManager from './components/FileManager'
 import Dashboard from './components/Dashboard'
 import StudentDirectory from './components/StudentDirectory'
+import DegreeWork from './components/DegreeWork'
 
 function App() {
   const [activeTab, setActiveTab] = useState('files');
@@ -31,6 +32,12 @@ function App() {
           >
             Directorio
           </li>
+          <li 
+            className={`nav-item ${activeTab === 'degreework' ? 'active' : ''}`}
+            onClick={() => setActiveTab('degreework')}
+          >
+            Trabajo de Grado
+          </li>
         </ul>
       </nav>
       
@@ -38,6 +45,7 @@ function App() {
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'files' && <FileManager />}
         {activeTab === 'directory' && <StudentDirectory />}
+        {activeTab === 'degreework' && <DegreeWork />}
       </main>
     </div>
   )

@@ -31,3 +31,41 @@ class AnalyticsSummaryResponse(BaseModel):
     distribution_by_zone: list[dict]
     top_zones: list[dict]
     top_centers: list[dict]
+
+class DegreeWorkFileResponse(BaseModel):
+    id: int
+    filename: str
+    periodo: str
+    curso: str
+    uploaded_at: datetime
+    record_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+class DegreeWorkUploadResponse(BaseModel):
+    filename: str
+    status: str
+    message: str
+    periodo: Optional[str] = None
+    curso: Optional[str] = None
+    records_processed: int = 0
+
+class DegreeWorkAnalyticsResponse(BaseModel):
+    periodo: str
+    programa_origen: str
+    student_count: int
+
+class DegreeWorkRecordResponse(BaseModel):
+    documento: str
+    estudiante: str
+    correo: str
+    zona: str
+    centro: str
+    programa_origen: str
+    periodo: str
+    curso: str
+    continuidad: bool = False
+
+    class Config:
+        from_attributes = True

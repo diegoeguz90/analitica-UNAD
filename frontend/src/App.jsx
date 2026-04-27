@@ -3,6 +3,7 @@ import FileManager from './components/FileManager'
 import Dashboard from './components/Dashboard'
 import StudentDirectory from './components/StudentDirectory'
 import DegreeWork from './components/DegreeWork'
+import Retention from './components/Retention'
 
 function App() {
   const [activeTab, setActiveTab] = useState('files');
@@ -38,6 +39,12 @@ function App() {
           >
             Trabajo de Grado
           </li>
+          <li 
+            className={`nav-item ${activeTab === 'retention' ? 'active' : ''}`}
+            onClick={() => setActiveTab('retention')}
+          >
+            Retención
+          </li>
         </ul>
       </nav>
       
@@ -46,6 +53,7 @@ function App() {
         {activeTab === 'files' && <FileManager />}
         {activeTab === 'directory' && <StudentDirectory />}
         {activeTab === 'degreework' && <DegreeWork />}
+        {activeTab === 'retention' && <Retention />}
       </main>
     </div>
   )

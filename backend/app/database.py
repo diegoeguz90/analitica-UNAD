@@ -7,7 +7,7 @@ os.makedirs("/app/data", exist_ok=True)
 SQLALCHEMY_DATABASE_URL = "sqlite:////app/data/analytics.db"
 # Fallback for local non-docker testing
 if not os.path.exists("/app"):
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./local_analytics.db"
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./data/analytics.db"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

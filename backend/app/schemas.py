@@ -69,3 +69,13 @@ class DegreeWorkRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RetentionResponse(BaseModel):
+    base_period: str
+    cohort_size: int
+    retained: int
+    retained_percentage: float
+    returned_later: int
+    returned_later_percentage: float
+    dropped_out: int
+    dropped_out_percentage: float

@@ -34,6 +34,7 @@ const DegreeWork = () => {
   const [error, setError] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [records, setRecords] = useState([]);
+  const [showFileManagement, setShowFileManagement] = useState(false);
   
   // Filter states
   const [selectedPrograms, setSelectedPrograms] = useState(() => {
@@ -260,6 +261,77 @@ const DegreeWork = () => {
 
   return (
     <div className="dashboard-content">
+      {/* File Management Collapsible Section */}
+      <div className="glass-card" style={{ marginBottom: '2rem', padding: '1rem' }}>
+        <button 
+          className="btn" 
+          onClick={() => setShowFileManagement(!showFileManagement)}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-sidebar)', color: 'var(--accent-primary)', border: '1px solid var(--border)' }}
+        >
+          <Upload size={18} />
+          {showFileManagement ? 'Ocultar Gestión de Reportes' : 'Gestionar Reportes (Carga)'}
+          {showFileManagement ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+
+        {showFileManagement && (
+          <div className="fade-in" style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            {/* Upload Section */}
+            <div className="upload-zone" style={{ padding: '1.5rem' }}>
+              <Upload size={24} color="var(--accent-primary)" style={{ marginBottom: '0.5rem' }} />
+              <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>Carga nuevos reportes</p>
+              <p className="text-muted" style={{ fontSize: '0.7rem', marginBottom: '1rem' }}>Formato: Reporte_Matricula_PERIODO_CURSO.xlsx</p>
+              
+              <label className="btn btn-primary" style={{ cursor: 'pointer', marginBottom: '0.5rem', width: '100%', fontSize: '0.8rem' }}>
+                <span>Seleccionar Archivos</span>
+                <input 
+                  id="degree-file-upload"
+                  type="file" 
+                  accept=".xlsx,.xls" 
+                  multiple 
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+              </label>
+
+              {selectedFiles.length > 0 && (
+                <div style={{ textAlign: 'left', marginTop: '0.5rem', background: '#ffffff', borderRadius: '8px', padding: '0.8rem', border: '1px solid var(--border)' }}>
+                  <div style={{ maxHeight: '80px', overflowY: 'auto', fontSize: '0.7rem' }}>
+                    {selectedFiles.map((file, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                        <X size={12} style={{ cursor: 'pointer', color: 'var(--danger)' }} onClick={() => removeSelectedFile(idx)} />
+                      </div>
+                    ))}
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', fontSize: '0.8rem' }} onClick={handleUpload} disabled={uploading}>
+                    {uploading ? `Subiendo... ${uploadProgress}%` : 'Comenzar Carga'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* History Section */}
+            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '1.5rem', border: '1px solid var(--border)', overflowY: 'auto', maxHeight: '300px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: '0.85rem' }}>Historial de Cargas</h4>
+                <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem' }}>{files.length}</span>
+              </div>
+              {files.map(f => (
+                <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', background: 'white', borderRadius: '8px', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.filename}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{f.periodo} • {f.record_count} reg.</div>
+                  </div>
+                  <button className="btn btn-danger" style={{ padding: '4px', minWidth: 'auto' }} onClick={() => handleDelete(f.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h2 style={{ marginBottom: '0.5rem' }}>Opción de Trabajo de Grado</h2>
@@ -377,9 +449,8 @@ const DegreeWork = () => {
         </div>
       )}
 
-      <div className="chart-grid" style={{ gridTemplateColumns: '3fr 2fr', gap: '2rem', marginBottom: '2.5rem' }}>
         {/* Main Chart Section */}
-        <div className="glass-card" style={{ padding: '2rem', marginBottom: 0 }}>
+        <div className="glass-card" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
             <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '12px' }}>
               <BarChart3 size={24} color="var(--accent-primary)" />
@@ -444,95 +515,6 @@ const DegreeWork = () => {
             </div>
           )}
         </div>
-
-        {/* Upload & Files Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="glass-card" style={{ padding: '2rem', marginBottom: 0 }}>
-            <h3>Carga de Reportes</h3>
-            <div className="upload-zone" style={{ padding: '2rem 1.5rem', marginBottom: '1.5rem' }}>
-              <Upload size={32} color="var(--accent-primary)" style={{ marginBottom: '1rem', opacity: 0.7 }} />
-              <p style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem' }}>
-                Selecciona uno o más archivos Excel
-              </p>
-              <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '1.5rem' }}>
-                Formato: Reporte_Matricula_PERIODO_CURSO.xlsx
-              </p>
-              
-              <label className="btn btn-primary" style={{ cursor: 'pointer', marginBottom: '1rem', width: '100%' }}>
-                <span>Seleccionar Archivos</span>
-                <input 
-                  id="degree-file-upload"
-                  type="file" 
-                  accept=".xlsx,.xls" 
-                  multiple 
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                />
-              </label>
-
-              {selectedFiles.length > 0 && (
-                <div style={{ textAlign: 'left', marginTop: '1rem', background: '#ffffff', borderRadius: '8px', padding: '1rem', border: '1px solid var(--border)' }}>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
-                    Archivos seleccionados: <span>{selectedFiles.length}</span>
-                  </p>
-                  <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
-                    {selectedFiles.map((file, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.25rem 0' }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{file.name}</span>
-                        <X size={14} style={{ cursor: 'pointer', color: 'var(--danger)' }} onClick={() => removeSelectedFile(idx)} />
-                      </div>
-                    ))}
-                  </div>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', marginTop: '1rem' }}
-                    onClick={handleUpload}
-                    disabled={uploading}
-                  >
-                    {uploading ? `Subiendo... ${uploadProgress}%` : 'Comenzar Carga'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="glass-card" style={{ padding: '2rem', flex: 1, marginBottom: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ marginBottom: 0 }}>Historial de Cargas</h3>
-              <span style={{ background: '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>{files.length} archivos</span>
-            </div>
-
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {files.length === 0 ? (
-                <p className="text-muted text-center py-8" style={{ fontSize: '0.85rem' }}>No hay archivos registrados.</p>
-              ) : (
-                files.map(f => (
-                  <div key={f.id} className="file-item" style={{ padding: '1rem', border: '1px solid #f1f5f9', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{f.filename}</span>
-                      <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={12} /> {f.periodo}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <CheckCircle2 size={12} /> {f.record_count} registros
-                        </span>
-                      </div>
-                    </div>
-                    <button 
-                      className="btn btn-danger" 
-                      style={{ padding: '0.4rem', minWidth: 'auto' }}
-                      onClick={() => handleDelete(f.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Student List Section */}
       <div className="glass-card" style={{ padding: '2rem' }}>

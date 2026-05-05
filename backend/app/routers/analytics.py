@@ -125,9 +125,14 @@ def get_paginated_students(
     q: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     semestre: Optional[int] = Query(None),
+    programa: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     query = db.query(Student)
+    if programa:
+        from app.models import File
+        query = query.join(Student.enrollments).join(EnrollmentRecord.file).filter(File.programa == programa).distinct()
+
     if q:
         search = f"%{q}%"
         query = query.filter(or_(
@@ -189,202 +194,200 @@ def get_paginated_students(
         "max_semester": int(max_semester)
     }
 
+@router.get("/programs", response_model=List[str])
+def get_programs(db: Session = Depends(get_db)):
+    from app.models import File
+    res = db.query(File.programa).distinct().order_by(File.programa).all()
+    return [row[0] for row in res if row[0]]
+
+def get_semester_label(p):
+    if not p or len(p) < 4: return p
+    # ABC is year/group, D is sub-period
+    # S1: 1, 2, 3; S2: 4, 5
+    sem = 'S1' if p[3] in ['1', '2', '3'] else 'S2'
+    return f"{p[:3]}-{sem}"
+
 @router.get("/retention", response_model=RetentionResponse)
 def get_retention_analytics(
-    period: str = Query(..., description="Base period to analyze retention for"),
+    period: str = Query(..., description="Period or Semester label to analyze"),
     db: Session = Depends(get_db)
 ):
-    # 1. Get all unique periods and sort them
+    # Normalize input: if a period code is passed, get its semester label
+    target_label = get_semester_label(period) if len(period) == 4 else period
+    
+    # 1. Get all periods and define blocks
     all_periods = [row[0] for row in db.query(EnrollmentRecord.periodo).distinct().order_by(EnrollmentRecord.periodo).all()]
-    if period not in all_periods:
-        raise HTTPException(status_code=404, detail="Period not found")
-
-    # 2. Group into semester blocks
-    def get_semester_type(p):
-        return 'S1' if p[-1] in ['1', '2', '3'] else 'S2'
-
+    all_periods = [p for p in all_periods if p != 'MAESTRO']
+    
     blocks = []
-    current_type = None
-    current_block = []
-
     for p in all_periods:
-        t = get_semester_type(p)
-        if t != current_type:
-            if current_block:
-                blocks.append({'type': current_type, 'periods': current_block})
-            current_type = t
-            current_block = [p]
+        lbl = get_semester_label(p)
+        if not blocks or blocks[-1]['label'] != lbl:
+            blocks.append({'label': lbl, 'periods': [p]})
         else:
-            current_block.append(p)
-    if current_block:
-        blocks.append({'type': current_type, 'periods': current_block})
-
-    # 3. Find target block and future blocks
-    block_index = -1
+            blocks[-1]['periods'].append(p)
+            
+    # 2. Find target block
+    block_idx = -1
     for i, b in enumerate(blocks):
-        if period in b['periods']:
-            block_index = i
+        if b['label'] == target_label:
+            block_idx = i
             break
             
-    target_periods = blocks[block_index + 1]['periods'] if block_index + 1 < len(blocks) else []
+    if block_idx == -1:
+        raise HTTPException(status_code=404, detail=f"Semester block {target_label} not found")
+
+    target_block = blocks[block_idx]
+    next_periods = blocks[block_idx + 1]['periods'] if block_idx + 1 < len(blocks) else []
     future_periods = []
-    for i in range(block_index + 2, len(blocks)):
+    for i in range(block_idx + 2, len(blocks)):
         future_periods.extend(blocks[i]['periods'])
-
-    # 4. Identify base cohort (students whose absolute FIRST enrollment is the selected period)
-    # Get the minimum period for each student
-    student_min_periods = (
-        db.query(
-            EnrollmentRecord.student_id, 
-            func.min(EnrollmentRecord.periodo).label("min_period")
-        )
-        .group_by(EnrollmentRecord.student_id)
-        .subquery()
-    )
-
-    cohort_student_ids = [
-        row[0] for row in db.query(student_min_periods.c.student_id)
-        .filter(student_min_periods.c.min_period == period)
-        .all()
-    ]
-
-    cohort_size = len(cohort_student_ids)
-    if cohort_size == 0:
-        return {
-            "base_period": period,
-            "cohort_size": 0,
-            "retained": 0,
-            "retained_percentage": 0.0,
-            "returned_later": 0,
-            "returned_later_percentage": 0.0,
-            "dropped_out": 0,
-            "dropped_out_percentage": 0.0
-        }
-
-    # 5. Categorize students
-    retained = 0
-    returned_later = 0
-    dropped_out = 0
-
-    # Get all future enrollments for the cohort (periods > period)
-    cohort_enrollments = (
-        db.query(EnrollmentRecord.student_id, EnrollmentRecord.periodo)
-        .filter(EnrollmentRecord.student_id.in_(cohort_student_ids))
-        .filter(EnrollmentRecord.periodo > period)
-        .all()
-    )
-
-    # Map student to their future periods
-    student_future_periods = {s_id: set() for s_id in cohort_student_ids}
-    for s_id, p in cohort_enrollments:
-        student_future_periods[s_id].add(p)
-
-    target_set = set(target_periods)
+        
+    target_set = set(next_periods)
     future_set = set(future_periods)
 
-    for s_id, periods_enrolled in student_future_periods.items():
-        if periods_enrolled.intersection(target_set):
-            retained += 1
-        elif periods_enrolled.intersection(future_set):
-            returned_later += 1
-        else:
-            dropped_out += 1
+    # 3. Calculate for each period in the block and sum
+    student_min_periods = db.query(
+        EnrollmentRecord.student_id, 
+        func.min(EnrollmentRecord.periodo).label("min_period")
+    ).group_by(EnrollmentRecord.student_id).subquery()
+
+    total_cohort = 0
+    total_retained = 0
+    total_returned = 0
+    total_dropped = 0
+
+    for p in target_block['periods']:
+        # Students whose FIRST enrollment was THIS period
+        cohort_ids = [
+            row[0] for row in db.query(student_min_periods.c.student_id)
+            .filter(student_min_periods.c.min_period == p)
+            .all()
+        ]
+        if not cohort_ids: continue
+        
+        total_cohort += len(cohort_ids)
+        
+        # Get all future enrollments for this cohort
+        enrollments = db.query(EnrollmentRecord.student_id, EnrollmentRecord.periodo).filter(
+            EnrollmentRecord.student_id.in_(cohort_ids),
+            EnrollmentRecord.periodo > p
+        ).all()
+        
+        st_history = {s_id: set() for s_id in cohort_ids}
+        for s_id, ep in enrollments:
+            st_history[s_id].add(ep)
+            
+        for s_id, p_set in st_history.items():
+            if p_set.intersection(target_set):
+                total_retained += 1
+            elif p_set.intersection(future_set):
+                total_returned += 1
+            else:
+                total_dropped += 1
+
+    if total_cohort == 0:
+        return {
+            "base_period": target_label,
+            "cohort_size": 0, "retained": 0, "retained_percentage": 0.0,
+            "returned_later": 0, "returned_later_percentage": 0.0,
+            "dropped_out": 0, "dropped_out_percentage": 0.0
+        }
 
     return {
-        "base_period": period,
-        "cohort_size": cohort_size,
-        "retained": retained,
-        "retained_percentage": round((retained / cohort_size) * 100, 2) if cohort_size > 0 else 0.0,
-        "returned_later": returned_later,
-        "returned_later_percentage": round((returned_later / cohort_size) * 100, 2) if cohort_size > 0 else 0.0,
-        "dropped_out": dropped_out,
-        "dropped_out_percentage": round((dropped_out / cohort_size) * 100, 2) if cohort_size > 0 else 0.0
+        "base_period": target_label,
+        "cohort_size": total_cohort,
+        "retained": total_retained,
+        "retained_percentage": round((total_retained / total_cohort) * 100, 2),
+        "returned_later": total_returned,
+        "returned_later_percentage": round((total_returned / total_cohort) * 100, 2),
+        "dropped_out": total_dropped,
+        "dropped_out_percentage": round((total_dropped / total_cohort) * 100, 2)
     }
 
 @router.get("/retention/history", response_model=List[RetentionResponse])
 def get_retention_history(db: Session = Depends(get_db)):
-    # 1. Get all unique periods and sort them
     all_periods = [row[0] for row in db.query(EnrollmentRecord.periodo).distinct().order_by(EnrollmentRecord.periodo).all()]
     all_periods = [p for p in all_periods if p != 'MAESTRO']
     
-    # 2. Group into semester blocks
-    def get_semester_type(p):
-        return 'S1' if p[-1] in ['1', '2', '3'] else 'S2'
-
     blocks = []
-    current_type = None
-    current_block = []
     for p in all_periods:
-        t = get_semester_type(p)
-        if t != current_type:
-            if current_block: blocks.append({'type': current_type, 'periods': current_block})
-            current_type = t
-            current_block = [p]
+        lbl = get_semester_label(p)
+        if not blocks or blocks[-1]['label'] != lbl:
+            blocks.append({'label': lbl, 'periods': [p]})
         else:
-            current_block.append(p)
-    if current_block: blocks.append({'type': current_type, 'periods': current_block})
-
-    # 3. Pre-calculate min period for each student to define cohorts
+            blocks[-1]['periods'].append(p)
+            
     student_min_periods = db.query(
         EnrollmentRecord.student_id, 
         func.min(EnrollmentRecord.periodo).label("min_period")
     ).group_by(EnrollmentRecord.student_id).all()
     
     cohort_map = {}
-    for s_id, min_p in student_min_periods:
-        if min_p not in cohort_map: cohort_map[min_p] = []
-        cohort_map[min_p].append(s_id)
+    for s_id, mp in student_min_periods:
+        if mp not in cohort_map: cohort_map[mp] = []
+        cohort_map[mp].append(s_id)
         
     results = []
-    for period in all_periods:
-        if period not in cohort_map: continue
-        
-        cohort_student_ids = cohort_map[period]
-        cohort_size = len(cohort_student_ids)
-        
-        # Identify target and future blocks relative to this period
-        block_idx = -1
-        for i, b in enumerate(blocks):
-            if period in b['periods']:
-                block_idx = i
-                break
-        
-        target_periods = blocks[block_idx + 1]['periods'] if block_idx + 1 < len(blocks) else []
-        future_periods = []
-        for i in range(block_idx + 2, len(blocks)):
-            future_periods.extend(blocks[i]['periods'])
+    for i, block in enumerate(blocks):
+        target_set = set(blocks[i+1]['periods']) if i+1 < len(blocks) else set()
+        future_set = set()
+        for j in range(i+2, len(blocks)):
+            future_set.update(blocks[j]['periods'])
             
-        # Get enrollments for this cohort > current period
-        cohort_enrollments = db.query(EnrollmentRecord.student_id, EnrollmentRecord.periodo).filter(
-            EnrollmentRecord.student_id.in_(cohort_student_ids),
-            EnrollmentRecord.periodo > period
-        ).all()
+        b_cohort = 0
+        b_retained = 0
+        b_returned = 0
+        b_dropped = 0
         
-        student_future = {s_id: set() for s_id in cohort_student_ids}
-        for s_id, p in cohort_enrollments:
-            student_future[s_id].add(p)
+        for p in block['periods']:
+            c_ids = cohort_map.get(p, [])
+            if not c_ids: continue
             
-        retained = 0
-        returned_later = 0
-        dropped_out = 0
-        
-        target_set = set(target_periods)
-        future_set = set(future_periods)
-        
-        for s_id, p_set in student_future.items():
-            if p_set.intersection(target_set): retained += 1
-            elif p_set.intersection(future_set): returned_later += 1
-            else: dropped_out += 1
+            b_cohort += len(c_ids)
             
-        results.append({
-            "base_period": period,
-            "cohort_size": cohort_size,
-            "retained": retained,
-            "retained_percentage": round((retained / cohort_size) * 100, 2) if cohort_size > 0 else 0.0,
-            "returned_later": returned_later,
-            "returned_later_percentage": round((returned_later / cohort_size) * 100, 2) if cohort_size > 0 else 0.0,
-            "dropped_out": dropped_out,
-            "dropped_out_percentage": round((dropped_out / cohort_size) * 100, 2) if cohort_size > 0 else 0.0
-        })
+            # Fetch all future enrollments for this specific period's cohort
+            enrollments = db.query(EnrollmentRecord.student_id, EnrollmentRecord.periodo).filter(
+                EnrollmentRecord.student_id.in_(c_ids),
+                EnrollmentRecord.periodo > p
+            ).all()
+            
+            st_paths = {s_id: set() for s_id in c_ids}
+            for s_id, ep in enrollments:
+                st_paths[s_id].add(ep)
+                
+            for s_id, p_set in st_paths.items():
+                if p_set.intersection(target_set):
+                    b_retained += 1
+                elif p_set.intersection(future_set):
+                    b_returned += 1
+                else:
+                    b_dropped += 1
         
+        if b_cohort > 0:
+            results.append({
+                "base_period": block['label'],
+                "cohort_size": b_cohort,
+                "retained": b_retained,
+                "retained_percentage": round((b_retained / b_cohort) * 100, 2),
+                "returned_later": b_returned,
+                "returned_later_percentage": round((b_returned / b_cohort) * 100, 2),
+                "dropped_out": b_dropped,
+                "dropped_out_percentage": round((b_dropped / b_cohort) * 100, 2)
+            })
+            
     return results
+
+@router.get("/retention/periods", response_model=List[str])
+def get_retention_periods(db: Session = Depends(get_db)):
+    all_periods = [row[0] for row in db.query(EnrollmentRecord.periodo).distinct().order_by(EnrollmentRecord.periodo).all()]
+    all_periods = [p for p in all_periods if p != 'MAESTRO']
+    
+    labels = []
+    seen = set()
+    for p in all_periods:
+        lbl = get_semester_label(p)
+        if lbl not in seen:
+            labels.append(lbl)
+            seen.add(lbl)
+    return labels

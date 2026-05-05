@@ -3,6 +3,8 @@ import axios from 'axios';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList
 } from 'recharts';
+import { ChevronDown, ChevronUp, FileUp } from 'lucide-react';
+import FileManager from './FileManager';
 
 const API_BASE = '/api';
 
@@ -11,7 +13,8 @@ const Dashboard = () => {
   const [selectedPeriods, setSelectedPeriods] = useState([]);
   const [zonePeriods, setZonePeriods] = useState([]);
   const [data, setData] = useState(null);
-  const [zoneData, setZoneData] = useState([]);
+  const [zoneSummary, setZoneSummary] = useState(null);
+  const [showFileManager, setShowFileManager] = useState(false);
 
   useEffect(() => {
     // Fetch available periods
@@ -28,7 +31,7 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Fetch analytics when global periods change
+    // Fetch global analytics
     const getAnalytics = async () => {
       try {
         let url = `${API_BASE}/analytics/summary`;
@@ -39,8 +42,8 @@ const Dashboard = () => {
         }
         const res = await axios.get(url);
         setData(res.data);
-        // Default zone data comes from initial summary
-        if (zonePeriods.length === 0) setZoneData(res.data.distribution_by_zone);
+        // Default zone summary matches global if no specific zone filter
+        if (zonePeriods.length === 0) setZoneSummary(res.data);
       } catch (e) {
         console.error(e);
       }
@@ -49,25 +52,25 @@ const Dashboard = () => {
   }, [selectedPeriods]);
 
   useEffect(() => {
-    // Fetch specific zone analytics when zone periods change
-    const getZoneAnalytics = async () => {
+    // Fetch zone-specific summary when zone periods change
+    const getZoneSummary = async () => {
       if (zonePeriods.length === 0 && data) {
-        setZoneData(data.distribution_by_zone);
+        setZoneSummary(data);
         return;
       }
       try {
-        let url = `${API_BASE}/analytics/zones`;
+        let url = `${API_BASE}/analytics/summary`;
         const params = new URLSearchParams();
         zonePeriods.forEach(p => params.append('periods', p));
         url += `?${params.toString()}`;
         const res = await axios.get(url);
-        setZoneData(res.data);
+        setZoneSummary(res.data);
       } catch (e) {
         console.error(e);
       }
     };
-    getZoneAnalytics();
-  }, [zonePeriods]);
+    getZoneSummary();
+  }, [zonePeriods, data]);
 
   const handlePeriodChange = (e) => {
     const opts = e.target.options;
@@ -99,13 +102,30 @@ const Dashboard = () => {
     setZonePeriods(values);
   };
 
-
-
   return (
     <div className="glass-card">
+      {/* File Management Collapsible Section */}
+      <div style={{ marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+        <button 
+          className="btn" 
+          onClick={() => setShowFileManager(!showFileManager)}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-sidebar)', color: 'var(--accent-primary)', border: '1px solid var(--border)' }}
+        >
+          <FileUp size={18} />
+          {showFileManager ? 'Ocultar Gestión de Reportes' : 'Gestionar reportes'}
+          {showFileManager ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+        
+        {showFileManager && (
+          <div className="fade-in" style={{ marginTop: '1.5rem' }}>
+            <FileManager mode="matricula" />
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
-          <h2>Dashboard Analítico</h2>
+          <h2>Resumen analitico</h2>
         </div>
         <div className="filters-container">
           <label className="file-meta" style={{ marginRight: '1rem', color: '#fff' }}>Filtrar Periodos Globales:</label>
@@ -131,11 +151,15 @@ const Dashboard = () => {
           {/* KPI Row */}
           <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
             <div className="glass-card kpi-card">
-              <span className="file-meta">Matrículas Totales</span>
+              <span className="file-meta">Eventos de matricula</span>
               <div className="kpi-value">{data.total_enrollments}</div>
             </div>
+            <div className="glass-card kpi-card" style={{ borderLeft: '4px solid var(--accent-secondary)' }}>
+              <span className="file-meta">Periodos</span>
+              <div className="kpi-value">{data.unique_students_per_period.length}</div>
+            </div>
             <div className="glass-card kpi-card" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
-              <span className="file-meta">Estudiantes Únicos (Global)</span>
+              <span className="file-meta">Estudiantes del programa</span>
               <div className="kpi-value">{data.unique_students_total}</div>
             </div>
             <div className="glass-card kpi-card" style={{ borderLeft: '4px solid var(--success)' }}>
@@ -202,55 +226,59 @@ const Dashboard = () => {
                   </select>
               </div>
             </div>
-            <div className="chart-container" style={{ height: '300px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart layout="vertical" data={zoneData} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis type="number" stroke="var(--text-muted)" />
-                  <YAxis dataKey="label" type="category" stroke="var(--text-main)" width={120} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
-                  <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8}>
-                    <LabelList dataKey="value" position="right" style={{ fill: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {zoneSummary && (
+              <div className="chart-container" style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart layout="vertical" data={zoneSummary.distribution_by_zone} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis type="number" stroke="var(--text-muted)" />
+                    <YAxis dataKey="label" type="category" stroke="var(--text-main)" width={120} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderRadius: '8px' }} />
+                    <Bar dataKey="value" name="Estudiantes" fill="var(--accent-secondary)" radius={[0, 4, 4, 0]} opacity={0.8}>
+                      <LabelList dataKey="value" position="right" style={{ fill: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
-          {/* Tables Row */}
-          <div className="chart-grid">
-            <div className="glass-card chart-box">
-              <h3>Top Zonas (Estudiantes)</h3>
-              <div className="table-wrapper">
-                <table className="analysis-table">
-                  <thead>
-                    <tr><th>Zona</th><th align="right">Estudiantes</th></tr>
-                  </thead>
-                  <tbody>
-                    {data.top_zones.map((z, idx) => (
-                      <tr key={idx}><td>{z.label}</td><td align="right"><strong>{z.value}</strong></td></tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Tables Row (Dynamic based on zone filter) */}
+          {zoneSummary && (
+            <div className="chart-grid">
+              <div className="glass-card chart-box">
+                <h3>Top Zonas (Estudiantes)</h3>
+                <div className="table-wrapper">
+                  <table className="analysis-table">
+                    <thead>
+                      <tr><th>Zona</th><th align="right">Estudiantes</th></tr>
+                    </thead>
+                    <tbody>
+                      {zoneSummary.top_zones.map((z, idx) => (
+                        <tr key={idx}><td>{z.label}</td><td align="right"><strong>{z.value}</strong></td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div className="glass-card chart-box">
+                <h3>Top Centros (Estudiantes)</h3>
+                <div className="table-wrapper">
+                  <table className="analysis-table">
+                    <thead>
+                      <tr><th>Centro</th><th align="right">Estudiantes</th></tr>
+                    </thead>
+                    <tbody>
+                      {zoneSummary.top_centers.map((c, idx) => (
+                        <tr key={idx}><td>{c.label}</td><td align="right"><strong>{c.value}</strong></td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-            
-            <div className="glass-card chart-box">
-              <h3>Top Centros (Estudiantes)</h3>
-              <div className="table-wrapper">
-                <table className="analysis-table">
-                  <thead>
-                    <tr><th>Centro</th><th align="right">Estudiantes</th></tr>
-                  </thead>
-                  <tbody>
-                    {data.top_centers.map((c, idx) => (
-                      <tr key={idx}><td>{c.label}</td><td align="right"><strong>{c.value}</strong></td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          )}
         </>
       )}
     </div>

@@ -6,7 +6,7 @@ import DegreeWork from './components/DegreeWork'
 import Retention from './components/Retention'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('files');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
     <div className="app-container">
@@ -16,28 +16,22 @@ function App() {
         </div>
         <ul className="nav-menu">
           <li 
-            className={`nav-item ${activeTab === 'files' ? 'active' : ''}`}
-            onClick={() => setActiveTab('files')}
-          >
-            Gestor de Archivos
-          </li>
-          <li 
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => setActiveTab('dashboard')}
           >
-            Dashboard
+            Matricula
           </li>
           <li 
             className={`nav-item ${activeTab === 'directory' ? 'active' : ''}`}
             onClick={() => setActiveTab('directory')}
           >
-            Directorio
+            Estudiantes del programa
           </li>
           <li 
             className={`nav-item ${activeTab === 'degreework' ? 'active' : ''}`}
             onClick={() => setActiveTab('degreework')}
           >
-            Trabajo de Grado
+            Opciones de trabajo de grado
           </li>
           <li 
             className={`nav-item ${activeTab === 'retention' ? 'active' : ''}`}
@@ -50,7 +44,6 @@ function App() {
       
       <main className="main-content">
         {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'files' && <FileManager />}
         {activeTab === 'directory' && <StudentDirectory />}
         {activeTab === 'degreework' && <DegreeWork />}
         {activeTab === 'retention' && <Retention />}

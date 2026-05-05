@@ -42,15 +42,13 @@ const Retention = () => {
   };
 
   useEffect(() => {
-    // Fetch available periods for the dropdown
+    // Fetch available semester blocks for the dropdown
     const fetchPeriods = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/files/`);
-        const uniquePeriods = [...new Set(res.data.map(f => f.periodo).filter(p => p !== 'MAESTRO'))];
-        uniquePeriods.sort();
-        setPeriods(uniquePeriods);
-        if (uniquePeriods.length > 0) {
-          setSelectedPeriod(uniquePeriods[0]);
+        const res = await axios.get(`${API_BASE}/analytics/retention/periods`);
+        setPeriods(res.data);
+        if (res.data.length > 0) {
+          setSelectedPeriod(res.data[0]);
         }
       } catch (err) {
         console.error("Error fetching periods", err);
@@ -185,7 +183,7 @@ const Retention = () => {
                     <PieChart>
                       <Pie
                         data={chartData}
-                        cx="50%"
+                        cx="40%"
                         cy="50%"
                         innerRadius={80}
                         outerRadius={140}
@@ -204,7 +202,13 @@ const Retention = () => {
                         contentStyle={{ backgroundColor: 'rgba(20, 20, 20, 0.9)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} 
                         formatter={(value, name, props) => [`${value} estudiantes (${props.payload.percentage}%)`, name]}
                       />
-                      <Legend verticalAlign="bottom" height={36} wrapperStyle={{ color: 'var(--text-muted)' }} />
+                      <Legend 
+                        align="right" 
+                        verticalAlign="middle" 
+                        layout="vertical" 
+                        iconType="circle"
+                        wrapperStyle={{ paddingLeft: '30px', color: 'var(--text-muted)' }} 
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

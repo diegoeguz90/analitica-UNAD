@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { ChevronDown, ChevronUp, FileUp } from 'lucide-react';
+import FileManager from './FileManager';
 
 const API_BASE = '/api';
 
@@ -18,6 +20,7 @@ const StudentDirectory = () => {
   
   // Expanded rows
   const [expandedRow, setExpandedRow] = useState(null);
+  const [showFileManager, setShowFileManager] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -70,7 +73,7 @@ const StudentDirectory = () => {
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-    setSkip(0); // Reset to first page
+    setSkip(0); 
     setExpandedRow(null);
   };
   
@@ -88,9 +91,28 @@ const StudentDirectory = () => {
 
   return (
     <div className="glass-card" style={{ padding: '2rem 3rem' }}>
+      {/* File Manager Toggle Section */}
+      <div style={{ marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
+        <button 
+          className="btn" 
+          onClick={() => setShowFileManager(!showFileManager)}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-sidebar)', color: 'var(--accent-primary)', border: '1px solid var(--border)' }}
+        >
+          <FileUp size={18} />
+          {showFileManager ? 'Ocultar Gestión de Reportes' : 'Gestionar reportes'}
+          {showFileManager ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+        
+        {showFileManager && (
+          <div className="fade-in" style={{ marginTop: '1.5rem' }}>
+            <FileManager mode="maestro" />
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2>Directorio de Estudiantes</h2>
+          <h2>Estudiantes del programa</h2>
           <p className="file-meta" style={{ marginTop: '-1.5rem', color: 'var(--text-muted)' }}>
             Listado general con detalle de historial académico.
           </p>
@@ -102,7 +124,7 @@ const StudentDirectory = () => {
             value={filterEstado}
             onChange={handleEstadoChange}
           >
-            <option value="">-- Todos los Estados --</option>
+            <option value="">-- Estado --</option>
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
             <option value="Egresando">Egresando</option>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ChevronDown, ChevronUp, FileUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileUp, Users, UserCheck, UserMinus, GraduationCap } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import FileManager from './FileManager';
 
 const API_BASE = '/api';
@@ -21,10 +22,24 @@ const StudentDirectory = () => {
   // Expanded rows
   const [expandedRow, setExpandedRow] = useState(null);
   const [showFileManager, setShowFileManager] = useState(false);
+  const [kpis, setKpis] = useState(null);
 
   useEffect(() => {
     fetchStudents();
   }, [skip, limit, search, filterEstado, filterSemestre]);
+
+  useEffect(() => {
+    fetchKpis();
+  }, []);
+
+  const fetchKpis = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/analytics/students/kpis`);
+      setKpis(res.data);
+    } catch (error) {
+      console.error("Error fetching KPIs:", error);
+    }
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -155,6 +170,64 @@ const StudentDirectory = () => {
           </button>
         </div>
       </div>
+
+      {/* KPI Section */}
+      {kpis && (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '12px', color: 'var(--accent-primary)' }}>
+                <Users size={24} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Total Estudiantes</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {kpis.total_activos + kpis.total_inactivos + kpis.total_egresando || total}
+                </div>
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: '#dcfce7', padding: '1rem', borderRadius: '12px', color: '#166534' }}>
+                <UserCheck size={24} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Activos</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)' }}>{kpis.total_activos}</div>
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: '#fee2e2', padding: '1rem', borderRadius: '12px', color: '#991b1b' }}>
+                <UserMinus size={24} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Inactivos</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)' }}>{kpis.total_inactivos}</div>
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: '#fef08a', padding: '1rem', borderRadius: '12px', color: '#854d0e' }}>
+                <GraduationCap size={24} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Egresando</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)' }}>{kpis.total_egresando}</div>
+              </div>
+            </div>
+          </div>
+          <div className="glass-card" style={{ padding: '1.5rem', height: '300px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-main)' }}>Estudiantes por Semestre</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={kpis.by_semester}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="semestre" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="count" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>

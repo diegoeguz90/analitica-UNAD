@@ -194,6 +194,33 @@ def get_paginated_students(
         "max_semester": int(max_semester)
     }
 
+@router.get("/students/kpis")
+def get_students_kpis(
+    programa: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    if programa:
+        from app.models import File
+        state_data = db.query(Student.estado, func.count(func.distinct(Student.documento))).join(Student.enrollments).join(EnrollmentRecord.file).filter(File.programa == programa).group_by(Student.estado).all()
+        semester_data = db.query(Student.semestre_relativo, func.count(func.distinct(Student.documento))).join(Student.enrollments).join(EnrollmentRecord.file).filter(File.programa == programa).group_by(Student.semestre_relativo).all()
+    else:
+        state_data = db.query(Student.estado, func.count(Student.documento)).group_by(Student.estado).all()
+        semester_data = db.query(Student.semestre_relativo, func.count(Student.documento)).group_by(Student.semestre_relativo).all()
+
+    total_activos = next((row[1] for row in state_data if row[0] == 'Activo'), 0)
+    total_inactivos = next((row[1] for row in state_data if row[0] == 'Inactivo'), 0)
+    total_egresando = next((row[1] for row in state_data if row[0] == 'Egresando'), 0)
+
+    by_semester = [{"semestre": f"Sem. {row[0]}", "count": row[1]} for row in semester_data if row[0] is not None]
+    by_semester.sort(key=lambda x: int(x["semestre"].split()[1]))
+
+    return {
+        "by_semester": by_semester,
+        "total_activos": total_activos,
+        "total_inactivos": total_inactivos,
+        "total_egresando": total_egresando
+    }
+
 @router.get("/programs", response_model=List[str])
 def get_programs(db: Session = Depends(get_db)):
     from app.models import File

@@ -15,6 +15,11 @@ const Dashboard = () => {
   const [data, setData] = useState(null);
   const [zoneSummary, setZoneSummary] = useState(null);
   const [showFileManager, setShowFileManager] = useState(false);
+  const [expandedZones, setExpandedZones] = useState({});
+
+  const toggleZone = (idx) => {
+    setExpandedZones(prev => ({...prev, [idx]: !prev[idx]}));
+  };
 
   useEffect(() => {
     // Fetch available periods
@@ -245,37 +250,41 @@ const Dashboard = () => {
 
           {/* Tables Row (Dynamic based on zone filter) */}
           {zoneSummary && (
-            <div className="chart-grid">
-              <div className="glass-card chart-box">
-                <h3>Top Zonas (Estudiantes)</h3>
-                <div className="table-wrapper">
-                  <table className="analysis-table">
-                    <thead>
-                      <tr><th>Zona</th><th align="right">Estudiantes</th></tr>
-                    </thead>
-                    <tbody>
-                      {zoneSummary.top_zones.map((z, idx) => (
-                        <tr key={idx}><td>{z.label}</td><td align="right"><strong>{z.value}</strong></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              
-              <div className="glass-card chart-box">
-                <h3>Top Centros (Estudiantes)</h3>
-                <div className="table-wrapper">
-                  <table className="analysis-table">
-                    <thead>
-                      <tr><th>Centro</th><th align="right">Estudiantes</th></tr>
-                    </thead>
-                    <tbody>
-                      {zoneSummary.top_centers.map((c, idx) => (
-                        <tr key={idx}><td>{c.label}</td><td align="right"><strong>{c.value}</strong></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div className="glass-card chart-box" style={{ marginTop: '2rem' }}>
+              <h3>Distribución por Zona y Centro (Estudiantes)</h3>
+              <div className="table-wrapper">
+                <table className="analysis-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}></th>
+                      <th>Zona / Centro</th>
+                      <th align="right">Estudiantes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {zoneSummary.top_zones.map((z, idx) => (
+                      <React.Fragment key={idx}>
+                        <tr 
+                          onClick={() => toggleZone(idx)}
+                          style={{ cursor: 'pointer', background: expandedZones[idx] ? 'rgba(255,255,255,0.05)' : 'transparent' }}
+                        >
+                          <td style={{ textAlign: 'center' }}>
+                            {expandedZones[idx] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </td>
+                          <td><strong>{z.label}</strong></td>
+                          <td align="right"><strong>{z.value}</strong></td>
+                        </tr>
+                        {expandedZones[idx] && z.centros && z.centros.map((c, cIdx) => (
+                          <tr key={`${idx}-${cIdx}`} style={{ background: 'rgba(0,0,0,0.2)' }}>
+                            <td></td>
+                            <td style={{ paddingLeft: '2rem', color: 'var(--text-muted)' }}>{c.label}</td>
+                            <td align="right" style={{ color: 'var(--text-muted)' }}>{c.value}</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

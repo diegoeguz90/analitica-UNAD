@@ -30,7 +30,6 @@ class AnalyticsSummaryResponse(BaseModel):
     total_credits_per_period: list[dict]
     distribution_by_zone: list[dict]
     top_zones: list[dict]
-    top_centers: list[dict]
 
 class DegreeWorkFileResponse(BaseModel):
     id: int

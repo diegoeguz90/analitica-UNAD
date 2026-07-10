@@ -52,14 +52,21 @@ def get_analytics_summary(
         .all()
     )
 
-    # 6. Top Centers
+    # 6. Centers by Zone
     res_centers = (
-        db.query(EnrollmentRecord.centro, func.count(func.distinct(EnrollmentRecord.student_id)).label("count"))
+        db.query(EnrollmentRecord.zona, EnrollmentRecord.centro, func.count(func.distinct(EnrollmentRecord.student_id)).label("count"))
         .filter(filter_expr)
-        .group_by(EnrollmentRecord.centro)
-        .order_by(func.count(func.distinct(EnrollmentRecord.student_id)).desc())
+        .group_by(EnrollmentRecord.zona, EnrollmentRecord.centro)
+        .order_by(EnrollmentRecord.zona, func.count(func.distinct(EnrollmentRecord.student_id)).desc())
         .all()
     )
+
+    zones_map = {row[0]: {"label": row[0], "value": row[1], "centros": []} for row in res_zones}
+    for zona, centro, count in res_centers:
+        if zona in zones_map:
+            zones_map[zona]["centros"].append({"label": centro, "value": count})
+            
+    top_zones = sorted(list(zones_map.values()), key=lambda x: x["value"], reverse=True)
 
     return {
         "total_enrollments": total_enrollments,
@@ -67,8 +74,7 @@ def get_analytics_summary(
         "unique_students_per_period": [{"periodo": row[0], "value": row[1]} for row in res_students],
         "total_credits_per_period": [{"periodo": row[0], "value": row[1] or 0} for row in res_credits],
         "distribution_by_zone": [{"label": row[0], "value": row[1]} for row in res_zones],
-        "top_zones": [{"label": row[0], "value": row[1]} for row in res_zones],
-        "top_centers": [{"label": row[0], "value": row[1]} for row in res_centers]
+        "top_zones": top_zones
     }
 
 @router.get("/zones", response_model=List[dict])
